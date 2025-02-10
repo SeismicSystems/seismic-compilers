@@ -38,7 +38,9 @@ use crate::output_selection::{ContractOutputSelection, OutputSelection};
 use foundry_compilers_core::{
     error::SolcError,
     utils::{
-        strip_prefix_owned, BERLIN_SOLC, BYZANTIUM_SOLC, CANCUN_SOLC, CONSTANTINOPLE_SOLC, ISTANBUL_SOLC, LONDON_SOLC, MERCURY_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC, SHANGHAI_SOLC
+        strip_prefix_owned, BERLIN_SOLC, BYZANTIUM_SOLC, CANCUN_SOLC, CONSTANTINOPLE_SOLC,
+        ISTANBUL_SOLC, LONDON_SOLC, MERCURY_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC,
+        SHANGHAI_SOLC,
     },
 };
 pub use serde_helpers::{deserialize_bytes, deserialize_opt_bytes};
@@ -856,8 +858,7 @@ impl EvmVersion {
             // For all other cases, cap at the at-the-time highest possible fork.
             let normalized = if *version >= MERCURY_SOLC {
                 self
-            }
-            else if self >= Self::Prague && *version >= PRAGUE_SOLC {
+            } else if self >= Self::Prague && *version >= PRAGUE_SOLC {
                 self
             } else if self >= Self::Cancun && *version >= CANCUN_SOLC {
                 Self::Cancun
