@@ -2,7 +2,7 @@
 
 This repository contains Seismic's fork of Foundry Compilers
 
-The upstream repository lives [here](https://github.com/foundry-rs/compilers). This fork is up-to-date with it through commit ` 8c5683d`. You can see this by viewing the [main](https://github.com/SeismicSystems/seismic-compilers/tree/main) branch on this repository.
+The upstream repository lives [here](https://github.com/foundry-rs/compilers). This fork is up-to-date with it through commit `8c5683d`. You can see this by viewing the [main](https://github.com/SeismicSystems/seismic-compilers/tree/main) branch on this repository.
 
 You can view all of our changes vs. upstream on this [pull request](https://github.com/SeismicSystems/seismic-compilers/pull/1). The sole purpose of this PR is display our diff; it will never be merged in to the main branch of this repo.
 
