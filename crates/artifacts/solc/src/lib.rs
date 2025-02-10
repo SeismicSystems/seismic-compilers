@@ -38,8 +38,7 @@ use crate::output_selection::{ContractOutputSelection, OutputSelection};
 use foundry_compilers_core::{
     error::SolcError,
     utils::{
-        strip_prefix_owned, BERLIN_SOLC, BYZANTIUM_SOLC, CANCUN_SOLC, CONSTANTINOPLE_SOLC,
-        ISTANBUL_SOLC, LONDON_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC, SHANGHAI_SOLC,
+        strip_prefix_owned, BERLIN_SOLC, BYZANTIUM_SOLC, CANCUN_SOLC, CONSTANTINOPLE_SOLC, ISTANBUL_SOLC, LONDON_SOLC, MERCURY_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC, SHANGHAI_SOLC
     },
 };
 pub use serde_helpers::{deserialize_bytes, deserialize_opt_bytes};
@@ -815,8 +814,9 @@ pub enum EvmVersion {
     London,
     Paris,
     Shanghai,
-    #[default]
     Cancun,
+    #[default]
+    Mercury,
     Prague,
 }
 
@@ -855,7 +855,10 @@ impl EvmVersion {
         if *version >= BYZANTIUM_SOLC {
             // If the Solc version is the latest, it supports all EVM versions.
             // For all other cases, cap at the at-the-time highest possible fork.
-            let normalized = if *version >= PRAGUE_SOLC {
+            let normalized = if *version >= MERCURY_SOLC {
+                self
+            }
+            else if self >= Self::Prague && *version >= PRAGUE_SOLC {
                 self
             } else if self >= Self::Cancun && *version >= CANCUN_SOLC {
                 Self::Cancun
@@ -900,6 +903,7 @@ impl EvmVersion {
             Self::Shanghai => "shanghai",
             Self::Cancun => "cancun",
             Self::Prague => "prague",
+            Self::Mercury => "mercury",
         }
     }
 
@@ -969,6 +973,7 @@ impl FromStr for EvmVersion {
             "shanghai" => Ok(Self::Shanghai),
             "cancun" => Ok(Self::Cancun),
             "prague" => Ok(Self::Prague),
+            "mercury" => Ok(Self::Mercury),
             s => Err(format!("Unknown evm version: {s}")),
         }
     }
@@ -1960,6 +1965,7 @@ mod tests {
             // Cancun
             ("0.8.24", Some(EvmVersion::Shanghai)),
             ("0.8.25", Some(EvmVersion::Cancun)),
+            ("0.8.28", Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
             assert_eq!(
@@ -2018,6 +2024,8 @@ mod tests {
             ("0.8.26", EvmVersion::Cancun, Some(EvmVersion::Cancun)),
             ("0.8.26", EvmVersion::Prague, Some(EvmVersion::Cancun)),
             ("0.8.27", EvmVersion::Prague, Some(EvmVersion::Prague)),
+            //Mercury
+            ("0.8.28", EvmVersion::Mercury, Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
             assert_eq!(
