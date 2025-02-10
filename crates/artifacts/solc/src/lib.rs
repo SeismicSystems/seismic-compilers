@@ -959,6 +959,7 @@ impl FromStr for EvmVersion {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        info!("Parsing EVM version: {}", s);
         match s {
             "homestead" => Ok(Self::Homestead),
             "tangerineWhistle" | "tangerinewhistle" => Ok(Self::TangerineWhistle),
