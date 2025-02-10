@@ -859,7 +859,7 @@ impl EvmVersion {
             let normalized = if *version >= MERCURY_SOLC {
                 self
             } else if self >= Self::Prague && *version >= PRAGUE_SOLC {
-                self
+                Self::Prague
             } else if self >= Self::Cancun && *version >= CANCUN_SOLC {
                 Self::Cancun
             } else if self >= Self::Shanghai && *version >= SHANGHAI_SOLC {
