@@ -8,7 +8,7 @@ You can view all of our changes vs. upstream on this [pull request](https://gith
 
 ## Main changes
 
-We simply enabled the Seismic Mercury Specification. Read more about it on the seismic-revm [README](https://github.com/SeismicSystems/seismic-revm?tab=readme-ov-file#mercury-specification--seismics-revm) 
+We simply enabled the Seismic Mercury [Specification](https://github.com/SeismicSystems/seismic-revm?tab=readme-ov-file#mercury-specification--seismics-revm) 
 
 ## Structure
 
