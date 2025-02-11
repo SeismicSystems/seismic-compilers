@@ -3,16 +3,16 @@ members = ["crates/artifacts/*", "crates/core", "crates/compilers"]
 resolver = "2"
 
 [workspace.package]
-authors = ["Foundry Maintainers"]
+authors = ["Foundry Maintainers", "Seismic Systems"]
 version = "0.12.9"
 rust-version = "1.83"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/foundry-rs/compilers"
-homepage = "https://github.com/foundry-rs/compilers"
+repository = "https://github.com/SeismicSystems/seismic-compilers"
+homepage = "https://github.com/SeismicSystems/seismic-compilers"
 documentation = "https://docs.rs/foundry-compilers"
-description = "Utilities for working with EVM language compilers"
-keywords = ["foundry", "solidity", "solc", "ethereum", "ethers"]
+description = "Utilities for working with SEVM language compilers"
+keywords = ["foundry", "solidity", "solc", "ethereum", "ethers", "seismic"]
 edition = "2021"
 exclude = [".github/", "scripts/", "test-data/"]
 
