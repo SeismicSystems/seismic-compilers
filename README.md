@@ -1,4 +1,23 @@
-# Foundry Compilers
+# Seismic Foundry Compilers
+
+This repository contains Seismic's fork of Foundry Compilers
+
+The upstream repository lives [here](https://github.com/foundry-rs/compilers). This fork is up-to-date with it through commit `8c5683d`. You can see this by viewing the [main](https://github.com/SeismicSystems/seismic-compilers/tree/main) branch on this repository.
+
+You can view all of our changes vs. upstream on this [pull request](https://github.com/SeismicSystems/seismic-compilers/pull/1). The sole purpose of this PR is display our diff; it will never be merged in to the main branch of this repo.
+
+## Main changes
+
+We simply enabled the Seismic Mercury [Specification](https://github.com/SeismicSystems/seismic-revm?tab=readme-ov-file#mercury-specification--seismics-revm) 
+
+## Structure
+
+Seismic's forks of the [reth](https://github.com/paradigmxyz/reth) stack all have the same branch structure:
+- `main` or `master`: this branch only consists of commits from the upstream repository. However it will rarely be up-to-date with upstream. The latest commit from this branch reflects how recently Seismic has merged in upstream commits to the seismic branch
+- `seismic`: the default and production branch for these repositories. This includes all Seismic-specific code essential to make our network run
+
+## Overview
+
 | [Docs](https://docs.rs/foundry-compilers/latest/foundry_compilers/) |
 
 Originally part of [`ethers-rs`] as `ethers-solc`, Foundry Compilers is the compilation backend for [Foundry](https://github.com/foundry-rs/foundry).
@@ -65,3 +84,5 @@ let output = project.compile().unwrap();
 // Tell Cargo that if a source file changes, to rerun this build script.
 project.rerun_if_sources_changed();
 ```
+
+

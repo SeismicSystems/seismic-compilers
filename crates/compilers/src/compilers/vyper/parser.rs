@@ -12,6 +12,8 @@ use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
+// TODO: remove
+#[allow(deprecated)]
 use winnow::{
     ascii::space1,
     combinator::{alt, opt, preceded},
@@ -161,6 +163,7 @@ fn parse_imports(content: &str) -> Vec<VyperImport> {
 }
 
 /// Parses given input, trying to find (import|from) part1.part2.part3 (import part4)?
+#[allow(deprecated)]
 fn parse_import(input: &mut &str) -> PResult<VyperImport> {
     (
         preceded(
