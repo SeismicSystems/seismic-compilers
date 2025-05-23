@@ -2033,7 +2033,7 @@ mod tests {
             ("0.8.27", EvmVersion::Prague, Some(EvmVersion::Prague)),
             //Mercury
             ("0.8.28", EvmVersion::Mercury, Some(EvmVersion::Mercury)),
-            ("0.8.29", EvmVersion::Osaka, Some(EvmVersion::Osaka)),
+            ("0.8.29", EvmVersion::Osaka, Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
             assert_eq!(
