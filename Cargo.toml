@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 authors = ["Foundry Maintainers", "Seismic Systems"]
-version = "0.12.9"
+version = "0.14.1"
 rust-version = "1.83"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
@@ -21,27 +21,31 @@ dbg-macro = "warn"
 manual-string-new = "warn"
 uninlined-format-args = "warn"
 use-self = "warn"
+redundant-clone = "warn"
+
+result-large-err = "allow"
+large-enum-variant = "allow"
 
 [workspace.lints.rust]
-rust-2018-idioms = "deny"
+rust-2018-idioms = "warn"
 # unreachable-pub = "warn"
-unused-must-use = "deny"
+unused-must-use = "warn"
+redundant-lifetimes = "warn"
 
 [workspace.lints.rustdoc]
 all = "warn"
 
 [workspace.dependencies]
-foundry-compilers = { path = "crates/compilers", version = "0.12.9" }
-foundry-compilers-artifacts = { path = "crates/artifacts/artifacts", version = "0.12.9" }
-foundry-compilers-artifacts-solc = { path = "crates/artifacts/solc", version = "0.12.9" }
-foundry-compilers-artifacts-vyper = { path = "crates/artifacts/vyper", version = "0.12.9" }
-foundry-compilers-core = { path = "crates/core", version = "0.12.9" }
+foundry-compilers = { path = "crates/compilers", version = "0.14.1" }
+foundry-compilers-artifacts = { path = "crates/artifacts/artifacts", version = "0.14.1" }
+foundry-compilers-artifacts-solc = { path = "crates/artifacts/solc", version = "0.14.1" }
+foundry-compilers-artifacts-vyper = { path = "crates/artifacts/vyper", version = "0.14.1" }
+foundry-compilers-core = { path = "crates/core", version = "0.14.1" }
 
 alloy-json-abi = { version = "0.8", features = ["serde_json"] }
 alloy-primitives = { version = "0.8", features = ["serde", "rand"] }
 cfg-if = "1.0"
 dunce = "1.0"
-md-5 = "0.10"
 memmap2 = "0.9"
 path-slash = "0.2"
 rayon = "1.8"
@@ -50,7 +54,8 @@ semver = { version = "1.0", features = ["serde"] }
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1.0"
 similar-asserts = "1"
-solar-parse = { version = "=0.1.1", default-features = false }
+solar-parse = { version = "=0.1.2", default-features = false }
+solar-sema = { version = "=0.1.2", default-features = false }
 svm = { package = "svm-rs", version = "0.5", default-features = false }
 tempfile = "3.9"
 thiserror = "2"
@@ -63,3 +68,12 @@ futures-util = "0.3"
 tokio = { version = "1.35", features = ["rt-multi-thread"] }
 
 snapbox = "0.6.9"
+
+[patch.crates-io]
+solar-sema = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-parse = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-ast = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-data-structures = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-interface = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-config = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
+solar-macros = { git = "https://github.com/paradigmxyz/solar.git", rev = "336bb6d" }
