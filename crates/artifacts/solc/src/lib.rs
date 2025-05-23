@@ -43,7 +43,6 @@ use foundry_compilers_core::{
         SHANGHAI_SOLC,
     },
 };
-use foundry_compilers_core::utils::MERCURY_SOLC;
 pub use serde_helpers::{deserialize_bytes, deserialize_opt_bytes};
 pub use sources::*;
 
@@ -856,7 +855,7 @@ impl EvmVersion {
     pub fn normalize_version_solc(self, version: &Version) -> Option<Self> {
         // The EVM version flag was only added in 0.4.21; we work our way backwards
         if *version >= BYZANTIUM_SOLC {
-            if *version >= MERCURY_SOLC {
+            if *version >= foundry_compilers_core::utils::MERCURY_SOLC {
                 return Some(Self::Mercury);
             }
             // If the Solc version is the latest, it supports all EVM versions.
