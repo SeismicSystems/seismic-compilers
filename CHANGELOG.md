@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1](https://github.com/foundry-rs/compilers/releases/tag/v0.14.1) - 2025-04-19
+
+### Performance
+
+- Switch md5 to xxhash ([#262](https://github.com/foundry-rs/compilers/issues/262))
+
+## [0.14.0](https://github.com/foundry-rs/compilers/releases/tag/v0.14.0) - 2025-04-07
+
+### Features
+
+- Add support for preprocessing sources ([#252](https://github.com/foundry-rs/compilers/issues/252))
+
+### Miscellaneous Tasks
+
+- Simplify pragma parsing ([#260](https://github.com/foundry-rs/compilers/issues/260))
+
+## [0.13.3](https://github.com/foundry-rs/compilers/releases/tag/v0.13.3) - 2025-02-14
+
+### Bug Fixes
+
+- Allow top level event declarations ([#251](https://github.com/foundry-rs/compilers/issues/251))
+
+### Features
+
+- Impl `.path(&self)` for `ContractInfo` ([#250](https://github.com/foundry-rs/compilers/issues/250))
+
+## [0.13.2](https://github.com/foundry-rs/compilers/releases/tag/v0.13.2) - 2025-02-06
+
+### Bug Fixes
+
+- Ordering for flattener ([#247](https://github.com/foundry-rs/compilers/issues/247))
+
+### Miscellaneous Tasks
+
+- Fix spelling issues ([#248](https://github.com/foundry-rs/compilers/issues/248))
+
+## [0.13.1](https://github.com/foundry-rs/compilers/releases/tag/v0.13.1) - 2025-02-02
+
+### Dependencies
+
+- [deps] Bump dirs ([#243](https://github.com/foundry-rs/compilers/issues/243))
+
+### Miscellaneous Tasks
+
+- Clippy + winnow 0.7 ([#244](https://github.com/foundry-rs/compilers/issues/244))
+- Call shrink_to_fit afte parsing source maps ([#242](https://github.com/foundry-rs/compilers/issues/242))
+
+## [0.13.0](https://github.com/foundry-rs/compilers/releases/tag/v0.13.0) - 2025-01-21
+
+### Features
+
+- Better artifact filenames for different profiles ([#241](https://github.com/foundry-rs/compilers/issues/241))
+- Add more features to reduce dependencies ([#239](https://github.com/foundry-rs/compilers/issues/239))
+
+### Miscellaneous Tasks
+
+- More lints ([#238](https://github.com/foundry-rs/compilers/issues/238))
+
 ## [0.12.9](https://github.com/foundry-rs/compilers/releases/tag/v0.12.9) - 2025-01-05
 
 ### Dependencies
