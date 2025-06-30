@@ -128,9 +128,7 @@ impl Solc {
     /// Parses the given source looking for the `pragma` definition and
     /// returns the corresponding SemVer version requirement.
     pub fn source_version_req(source: &Source) -> Result<VersionReq> {
-        let version =
-            utils::find_version_pragma(&source.content).ok_or(SolcError::PragmaNotFound)?;
-        Ok(SolData::parse_version_req(version.as_str())?)
+        Ok(SolData::parse_version_pragma(&source.content).ok_or(SolcError::PragmaNotFound)??)
     }
 
     /// Given a Solidity source, it detects the latest compiler version which can be used
@@ -615,7 +613,7 @@ fn version_from_output(output: Output) -> Result<Version> {
         let version = stdout
             .lines()
             .filter(|l| !l.trim().is_empty())
-            .last()
+            .next_back()
             .ok_or_else(|| SolcError::msg("Version not found in Solc output"))?;
         // NOTE: semver doesn't like `+` in g++ in build metadata which is invalid semver
         Ok(Version::from_str(&version.trim_start_matches("Version: ").replace(".g++", ".gcc"))?)

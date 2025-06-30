@@ -72,6 +72,26 @@ mod tree;
 pub use parse::SolImportAlias;
 pub use tree::{print, Charset, TreeOptions};
 
+/// Container for result of version and profile resolution of sources contained in [`Graph`].
+#[derive(Debug)]
+pub struct ResolvedSources<'a, C: Compiler> {
+    /// Resolved set of sources.
+    ///
+    /// Mapping from language to a [`Vec`] of compiler inputs consisting of version, sources set
+    /// and settings.
+    pub sources: VersionedSources<'a, C::Language, C::Settings>,
+    /// A mapping from a source file path to the primary profile name selected for it.
+    ///
+    /// This is required because the same source file might be compiled with multiple different
+    /// profiles if it's present as a dependency for other sources. We want to keep a single name
+    /// of the profile which was chosen specifically for each source so that we can default to it.
+    /// Right now, this is used when generating artifact names, "primary" artifact will never have
+    /// a profile suffix.
+    pub primary_profiles: HashMap<PathBuf, &'a str>,
+    /// Graph edges.
+    pub edges: GraphEdges<C::ParsedSource>,
+}
+
 /// The underlying edges of the graph which only contains the raw relationship data.
 ///
 /// This is kept separate from the `Graph` as the `Node`s get consumed when the `Solc` to `Sources`
@@ -149,18 +169,18 @@ impl<D> GraphEdges<D> {
     }
 
     /// Returns all files imported by the given file
-    pub fn imports(&self, file: &Path) -> HashSet<&PathBuf> {
+    pub fn imports(&self, file: &Path) -> HashSet<&Path> {
         if let Some(start) = self.indices.get(file).copied() {
-            NodesIter::new(start, self).skip(1).map(move |idx| &self.rev_indices[&idx]).collect()
+            NodesIter::new(start, self).skip(1).map(move |idx| &*self.rev_indices[&idx]).collect()
         } else {
             HashSet::new()
         }
     }
 
     /// Returns all files that import the given file
-    pub fn importers(&self, file: &Path) -> HashSet<&PathBuf> {
+    pub fn importers(&self, file: &Path) -> HashSet<&Path> {
         if let Some(start) = self.indices.get(file).copied() {
-            self.rev_edges[start].iter().map(move |idx| &self.rev_indices[idx]).collect()
+            self.rev_edges[start].iter().map(move |idx| &*self.rev_indices[idx]).collect()
         } else {
             HashSet::new()
         }
@@ -172,7 +192,7 @@ impl<D> GraphEdges<D> {
     }
 
     /// Returns the path of the given node
-    pub fn node_path(&self, id: usize) -> &PathBuf {
+    pub fn node_path(&self, id: usize) -> &Path {
         &self.rev_indices[&id]
     }
 
@@ -307,7 +327,7 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
     }
 
     /// Returns all files imported by the given file
-    pub fn imports(&self, path: &Path) -> HashSet<&PathBuf> {
+    pub fn imports(&self, path: &Path) -> HashSet<&Path> {
         self.edges.imports(path)
     }
 
@@ -468,14 +488,13 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
     ///
     /// First we determine the compatible version for each input file (from sources and test folder,
     /// see `Self::resolve`) and then we add all resolved library imports.
-    pub fn into_sources_by_version<C, T, S>(
+    pub fn into_sources_by_version<C, T>(
         self,
         project: &Project<C, T>,
-    ) -> Result<(VersionedSources<'_, L, S>, GraphEdges<D>)>
+    ) -> Result<ResolvedSources<'_, C>>
     where
         T: ArtifactOutput<CompilerContract = C::CompilerContract>,
-        S: CompilerSettings,
-        C: Compiler<ParsedSource = D, Language = L, Settings = S>,
+        C: Compiler<ParsedSource = D, Language = L>,
     {
         /// insert the imports of the given node into the sources map
         /// There can be following graph:
@@ -514,6 +533,7 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
         let mut all_nodes = nodes.into_iter().enumerate().collect::<HashMap<_, _>>();
 
         let mut resulted_sources = HashMap::new();
+        let mut default_profiles = HashMap::new();
 
         let profiles = project.settings_profiles().collect::<Vec<_>>();
 
@@ -534,6 +554,8 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
                         // set
                         let (path, source) =
                             all_nodes.get(&idx).cloned().expect("node is preset. qed");
+
+                        default_profiles.insert(path.clone(), profiles[profile_idx].0);
                         sources.insert(path, source);
                         insert_imports(
                             idx,
@@ -550,7 +572,7 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
             resulted_sources.insert(language, versioned_sources);
         }
 
-        Ok((resulted_sources, edges))
+        Ok(ResolvedSources { sources: resulted_sources, primary_profiles: default_profiles, edges })
     }
 
     /// Writes the list of imported files into the given formatter:
@@ -635,9 +657,9 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
 
         if !all_versions.iter().any(|v| req.matches(v.as_ref())) {
             return if project.offline {
-                Err(SourceVersionError::NoMatchingVersionOffline(req.clone()))
+                Err(SourceVersionError::NoMatchingVersionOffline(req))
             } else {
-                Err(SourceVersionError::NoMatchingVersion(req.clone()))
+                Err(SourceVersionError::NoMatchingVersion(req))
             };
         }
 
@@ -685,9 +707,7 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
         {
             // check if the version is even valid
             let f = utils::source_name(&failed_node.path, &self.root).display();
-            return Err(
-                format!("Encountered invalid solc version in {f}: {version_err}").to_string()
-            );
+            return Err(format!("Encountered invalid solc version in {f}: {version_err}"));
         } else {
             // if the node requirement makes sense, it means that there is at least one node
             // which requirement conflicts with it
@@ -757,9 +777,7 @@ impl<L: Language, D: ParsedSource<Language = L>> Graph<D> {
 
         if all_profiles.is_empty() {
             let f = utils::source_name(&failed_node.path, &self.root).display();
-            return Err(
-                format!("Missing profile satisfying settings restrictions for {f}").to_string()
-            );
+            return Err(format!("Missing profile satisfying settings restrictions for {f}"));
         }
 
         // iterate over all the nodes once again and find the one incompatible
@@ -1103,7 +1121,7 @@ impl<D: ParsedSource> Node<D> {
         &self.source.content
     }
 
-    pub fn unpack(&self) -> (&PathBuf, &Source) {
+    pub fn unpack(&self) -> (&Path, &Source) {
         (&self.path, &self.source)
     }
 }
@@ -1181,8 +1199,8 @@ mod tests {
         let dapp_test = graph.node(1);
         assert_eq!(dapp_test.path, paths.sources.join("Dapp.t.sol"));
         assert_eq!(
-            dapp_test.data.imports.iter().map(|i| i.data().path()).collect::<Vec<&PathBuf>>(),
-            vec![&PathBuf::from("ds-test/test.sol"), &PathBuf::from("./Dapp.sol")]
+            dapp_test.data.imports.iter().map(|i| i.data().path()).collect::<Vec<&Path>>(),
+            vec![Path::new("ds-test/test.sol"), Path::new("./Dapp.sol")]
         );
         assert_eq!(graph.imported_nodes(1).to_vec(), vec![2, 0]);
     }

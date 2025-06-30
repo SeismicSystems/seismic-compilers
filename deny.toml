@@ -1,7 +1,10 @@
 [advisories]
 version = 2
 yanked = "warn"
-ignore = []
+ignore = [
+    # https://rustsec.org/advisories/RUSTSEC-2024-0436 paste! is unmaintained
+    "RUSTSEC-2024-0436",
+]
 
 [bans]
 multiple-versions = "warn"
@@ -30,6 +33,7 @@ allow = [
     "LicenseRef-ring",
     # https://github.com/briansmith/webpki/issues/148
     "LicenseRef-webpki",
+    "CDLA-Permissive-2.0",
 ]
 
 exceptions = [

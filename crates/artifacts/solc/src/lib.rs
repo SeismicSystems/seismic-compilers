@@ -39,7 +39,7 @@ use foundry_compilers_core::{
     error::SolcError,
     utils::{
         strip_prefix_owned, BERLIN_SOLC, BYZANTIUM_SOLC, CANCUN_SOLC, CONSTANTINOPLE_SOLC,
-        ISTANBUL_SOLC, LONDON_SOLC, MERCURY_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC,
+        ISTANBUL_SOLC, LONDON_SOLC, OSAKA_SOLC, PARIS_SOLC, PETERSBURG_SOLC, PRAGUE_SOLC,
         SHANGHAI_SOLC,
     },
 };
@@ -820,6 +820,7 @@ pub enum EvmVersion {
     #[default]
     Mercury,
     Prague,
+    Osaka,
 }
 
 impl EvmVersion {
@@ -854,10 +855,13 @@ impl EvmVersion {
     pub fn normalize_version_solc(self, version: &Version) -> Option<Self> {
         // The EVM version flag was only added in 0.4.21; we work our way backwards
         if *version >= BYZANTIUM_SOLC {
+            if *version >= foundry_compilers_core::utils::MERCURY_SOLC {
+                return Some(Self::Mercury);
+            }
             // If the Solc version is the latest, it supports all EVM versions.
             // For all other cases, cap at the at-the-time highest possible fork.
-            let normalized = if *version >= MERCURY_SOLC {
-                self
+            let normalized = if *version >= OSAKA_SOLC {
+                Self::Osaka
             } else if self >= Self::Prague && *version >= PRAGUE_SOLC {
                 Self::Prague
             } else if self >= Self::Cancun && *version >= CANCUN_SOLC {
@@ -890,6 +894,7 @@ impl EvmVersion {
     /// Returns the EVM version as a string.
     pub const fn as_str(&self) -> &'static str {
         match self {
+            Self::Mercury => "mercury",
             Self::Homestead => "homestead",
             Self::TangerineWhistle => "tangerineWhistle",
             Self::SpuriousDragon => "spuriousDragon",
@@ -903,7 +908,7 @@ impl EvmVersion {
             Self::Shanghai => "shanghai",
             Self::Cancun => "cancun",
             Self::Prague => "prague",
-            Self::Mercury => "mercury",
+            Self::Osaka => "osaka",
         }
     }
 
@@ -960,6 +965,7 @@ impl FromStr for EvmVersion {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "mercury" => Ok(Self::Mercury),
             "homestead" => Ok(Self::Homestead),
             "tangerineWhistle" | "tangerinewhistle" => Ok(Self::TangerineWhistle),
             "spuriousDragon" | "spuriousdragon" => Ok(Self::SpuriousDragon),
@@ -973,7 +979,7 @@ impl FromStr for EvmVersion {
             "shanghai" => Ok(Self::Shanghai),
             "cancun" => Ok(Self::Cancun),
             "prague" => Ok(Self::Prague),
-            "mercury" => Ok(Self::Mercury),
+            "osaka" => Ok(Self::Osaka),
             s => Err(format!("Unknown evm version: {s}")),
         }
     }
@@ -1850,7 +1856,7 @@ mod tests {
 
     #[test]
     fn can_link_bytecode() {
-        // test cases taken from <https://github.com/ethereum/solc-js/blob/master/test/linker.js>
+        // test cases taken from <https://github.com/ethereum/solc-js/blob/master/test/linker.ts>
 
         #[derive(Serialize, Deserialize)]
         struct Mockject {
@@ -2026,6 +2032,7 @@ mod tests {
             ("0.8.27", EvmVersion::Prague, Some(EvmVersion::Prague)),
             //Mercury
             ("0.8.28", EvmVersion::Mercury, Some(EvmVersion::Mercury)),
+            ("0.8.29", EvmVersion::Osaka, Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
             assert_eq!(
