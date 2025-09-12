@@ -16,7 +16,8 @@ Seismic's forks of the [reth](https://github.com/paradigmxyz/reth) stack all hav
 - `main` or `master`: this branch only consists of commits from the upstream repository. However it will rarely be up-to-date with upstream. The latest commit from this branch reflects how recently Seismic has merged in upstream commits to the seismic branch
 - `seismic`: the default and production branch for these repositories. This includes all Seismic-specific code essential to make our network run
 
-## Overview
+
+# Foundry Compilers
 
 | [Docs](https://docs.rs/foundry-compilers/latest/foundry_compilers/) |
 
@@ -43,9 +44,7 @@ When updating this, also update:
 - .github/workflows/ci.yml
 -->
 
-Foundry Compilers will keep a rolling MSRV (minimum supported rust version) policy of **at
-least** 6 months. When increasing the MSRV, the new Rust version must have been
-released at least six months ago. The current MSRV is 1.86.0.
+The current MSRV (minimum supported rust version) is 1.88.
 
 Note that the MSRV is not increased automatically, and only as part of a minor
 release.
@@ -65,7 +64,7 @@ To install, simply add `foundry-compilers` to your cargo dependencies.
 
 ```toml
 [dependencies]
-foundry-compilers = "0.10.1"
+foundry-compilers = "0.18.3"
 ```
 
 Example usage:
