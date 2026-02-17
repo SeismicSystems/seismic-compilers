@@ -8,7 +8,7 @@ Foundry Compilers provides Solidity and Vyper compilation, caching, dependency r
 
 ## Build
 
-Rust workspace with 5 crates. MSRV: **1.88**. Version: **0.19.1**.
+Rust workspace with 5 crates. MSRV: **1.88**.
 
 ### macOS
 
@@ -56,20 +56,9 @@ RUSTFLAGS="-D warnings" cargo check
 cargo test --all-features
 ```
 
-### Test summary
-
-- **30** unit tests in `foundry-compilers`
-- **49** unit tests in `foundry-compilers-artifacts-solc`
-- **2** unit tests in `foundry-compilers-artifacts-vyper`
-- **15** unit tests in `foundry-compilers-core`
-- **56** doc tests across all crates
-- Integration tests in `crates/compilers/tests/` (`project.rs`, `mocked.rs`) — require features `full`, `project-util`, `test-utils`
-
 ## Code Style
 
-- **Formatter**: `cargo +nightly fmt --all` (uses nightly-only rustfmt features; `cargo fmt` on stable works but ignores some settings)
-- **Max width**: 100 chars
-- **Imports**: `imports_granularity = "Crate"` (nightly)
+- **Formatter**: `cargo +nightly fmt --all` (nightly required — see `rustfmt.toml` for settings)
 - **Linter**: `cargo clippy --all-features` — warnings-as-errors in CI
 - **Commit convention**: [Conventional Commits](https://www.conventionalcommits.org/) — `type(scope): message`
 
@@ -78,68 +67,37 @@ Key clippy lints (workspace-level):
 - `dbg-macro`, `uninlined-format-args`, `use-self`, `redundant-clone` = warn
 - `result-large-err`, `large-enum-variant` = allow
 
-## Project Layout
-
-```
-crates/
-  compilers/              Main crate: compiler abstraction, project management
-    src/
-      artifact_output/    Output artifact handling (configurable, HH format)
-      cache/              Compilation cache (dirty detection, invalidation)
-      compile/            Compilation pipeline and output types
-      compilers/          Compiler abstractions
-        solc/             Solc integration (compiler, parser)
-        vyper/            Vyper integration
-      config.rs           Project paths and configuration
-      filter.rs           Source file filtering
-      flatten.rs          Source flattening
-      resolver/           Import/dependency resolution (graph-based)
-      report/             Compilation reporting and logging
-    tests/
-      project.rs          Integration tests (requires: full, project-util, test-utils)
-      mocked.rs           Mocked compiler tests (requires: full, project-util)
-  artifacts/
-    solc/                 Solc JSON artifact bindings (contract, bytecode, AST, source maps)
-    vyper/                Vyper JSON artifact bindings
-    artifacts/            Meta-crate re-exporting solc + vyper artifacts
-  core/                   Core utilities (path handling, version detection, source discovery)
-test-data/                Test fixtures (sample projects, AST, compiler output, remappings)
-benches/                  Benchmarks (compile_many, read_all)
-scripts/
-  changelog.sh            Git cliff changelog generation
-.github/
-  workflows/
-    ci.yml                Upstream CI (main branch) — multi-platform, nextest, cargo-hack
-    seismic.yml           Seismic CI (seismic branch) — build, warnings, test
-  scripts/
-    install_test_binaries.sh  Installs Geth + Solc for CI
-```
-
 ## Key Seismic Modifications
 
-Three files changed from upstream:
+Files changed from upstream:
 
+- **`crates/artifacts/solc/src/lib.rs`** — `Mercury` variant in `EvmVersion` enum, set as `#[default]`; normalization returns `Mercury` for solc >= 0.8.28; serializes as `"mercury"`; test cases validating behavior
 - **`crates/core/src/utils/mod.rs`** — `MERCURY_SOLC` constant (`Version::new(0, 8, 28)`)
-- **`crates/artifacts/solc/src/lib.rs`** — `Mercury` variant in `EvmVersion` enum, set as `#[default]`; normalization returns `Mercury` for solc >= 0.8.28; serializes as `"mercury"`
-- **`crates/artifacts/solc/src/lib.rs`** — test cases validating Mercury EVM version behavior
+- **`crates/compilers/src/cache/iface.rs`** — `.1` → `.data` field access for `FlaggedStorage`
+- **`crates/compilers/src/resolver/parse.rs`** — `.1` → `.data` field access for `FlaggedStorage`
+- **`crates/compilers/src/compilers/vyper/parser.rs`** — `#[allow(deprecated)]` annotation
+- **`Cargo.toml`** — metadata (authors, repo, homepage, description)
+- **`README.md`** — fork preamble with link to upstream and PR diff
+- **`.github/CODEOWNERS`** — Seismic maintainer
+- **`.github/workflows/seismic.yml`** — Seismic CI workflow (new file)
 
 ## Feature Flags
 
-| Feature              | Description                                             |
-| -------------------- | ------------------------------------------------------- |
-| `default`            | Enables `rustls`                                        |
-| `full`               | Enables `async` + `svm-solc`                            |
-| `async`              | Adds async methods via `tokio`                          |
-| `svm-solc`           | Auto-detect and manage `solc` builds via `svm`          |
-| `project-util`       | Temp project utilities for testing (implies `svm-solc`) |
-| `rustls` / `openssl` | TLS backend for `svm` downloads                         |
+| Feature              | Description                          |
+| -------------------- | ------------------------------------ |
+| `default`            | Enables `rustls`                     |
+| `full`               | `async` + `svm-solc`                 |
+| `async`              | Async methods via `tokio`            |
+| `svm-solc`           | Auto-manage `solc` via `svm`         |
+| `project-util`       | Temp project utilities for testing   |
+| `rustls` / `openssl` | TLS backend for `svm` downloads      |
 
 ## CI
 
 GitHub Actions (`.github/workflows/`):
 
-- **seismic.yml** (seismic branch): `cargo fmt --check` (nightly), `cargo build`, `RUSTFLAGS="-D warnings" cargo check`, `cargo test`
-- **ci.yml** (main branch): Multi-platform (ubuntu, macOS, windows) × (stable, MSRV 1.88) × (default, all-features), plus `cargo-hack` feature powerset, clippy, docs, deny
+- **seismic.yml** (seismic branch): 4 jobs — `rustfmt` (nightly fmt check), `build` (cargo build), `warnings` (`RUSTFLAGS="-D warnings" cargo check`), `test` (cargo test). Runs on push/PR to `seismic`.
+- **ci.yml**: upstream-only, runs on `main` branch — not used by Seismic.
 
 ## Branches
 
@@ -148,10 +106,8 @@ GitHub Actions (`.github/workflows/`):
 
 ## Troubleshooting
 
-| Problem                                       | Fix                                                                                                                                         |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cargo fmt` warnings about unstable features  | Expected on stable toolchain. CI uses nightly: `cargo +nightly fmt --all`. Install with `rustup toolchain install nightly`.                 |
-| Integration tests don't run with `cargo test` | They require features: `cargo test --all-features`. The `project` and `mocked` tests need `full`, `project-util`, and `test-utils`.         |
-| `RUSTFLAGS="-D warnings"` fails on new code   | This is the CI standard. Fix all warnings before pushing.                                                                                   |
-| Build slow on first run                       | ~30s on macOS arm64. Subsequent builds are incremental.                                                                                     |
-| `svm` / solc download failures in tests       | Network-dependent. Some integration tests download solc via `svm`. Ensure network access or skip with `cargo test` (default features only). |
+| Problem                                       | Fix                                                                                                                                 |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `cargo fmt` warnings about unstable features  | Expected on stable toolchain. CI uses nightly: `cargo +nightly fmt --all`. Install with `rustup toolchain install nightly`.         |
+| Integration tests don't run with `cargo test` | They require features: `cargo test --all-features`. The `project` and `mocked` tests need `full`, `project-util`, and `test-utils`. |
+| `RUSTFLAGS="-D warnings"` fails on new code   | This is the CI standard. Fix all warnings before pushing.                                                                           |
