@@ -78,7 +78,6 @@ Files changed from upstream:
 - **`crates/compilers/src/compilers/vyper/parser.rs`** — `#[allow(deprecated)]` annotation
 - **`Cargo.toml`** — metadata (authors, repo, homepage, description)
 - **`README.md`** — fork preamble with link to upstream and PR diff
-- **`.github/CODEOWNERS`** — Seismic maintainer
 - **`.github/workflows/seismic.yml`** — Seismic CI workflow (new file)
 
 ## Feature Flags
