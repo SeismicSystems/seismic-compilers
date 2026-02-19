@@ -323,19 +323,18 @@ impl Reporter for BasicStdoutReporter {
     /// [`Compiler::compile()`]: crate::compilers::Compiler::compile
     fn on_compiler_spawn(&self, compiler_name: &str, version: &Version, dirty_files: &[PathBuf]) {
         println!(
-            "Compiling {} files with {} {}.{}.{}",
+            "Compiling {} files with {} {}",
             dirty_files.len(),
             compiler_name,
-            version.major,
-            version.minor,
-            version.patch
+            format_version_with_commit(version),
         );
     }
 
     fn on_compiler_success(&self, compiler_name: &str, version: &Version, duration: &Duration) {
         println!(
-            "{} {}.{}.{} finished in {duration:.2?}",
-            compiler_name, version.major, version.minor, version.patch
+            "{} {} finished in {duration:.2?}",
+            compiler_name,
+            format_version_with_commit(version),
         );
     }
 
@@ -373,6 +372,25 @@ pub fn format_unresolved_imports(imports: &[(&Path, &Path)], remappings: &[Remap
         info,
         remappings.iter().map(|r| r.to_string()).collect::<Vec<_>>().join("\n      ")
     )
+}
+
+/// Extract short commit hash from version build metadata.
+/// Handles format like "commit.676bdecc.Darwin.appleclang" → "676bdec"
+pub fn extract_short_commit(version: &Version) -> Option<&str> {
+    let build = version.build.as_str();
+    let hash = build.strip_prefix("commit.")?;
+    let end = hash.find('.').unwrap_or(hash.len()).min(7);
+    Some(&hash[..end])
+}
+
+/// Format version with optional short commit hash for display.
+/// Returns e.g. "0.8.31 (676bdec)" or "0.8.31" if no commit metadata.
+pub fn format_version_with_commit(version: &Version) -> String {
+    if let Some(hash) = extract_short_commit(version) {
+        format!("{}.{}.{} ({hash})", version.major, version.minor, version.patch)
+    } else {
+        format!("{}.{}.{}", version.major, version.minor, version.patch)
+    }
 }
 
 /// Returned if setting the global reporter fails.

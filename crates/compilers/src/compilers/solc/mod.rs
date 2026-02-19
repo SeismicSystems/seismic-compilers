@@ -83,11 +83,15 @@ impl Compiler for SolcCompiler {
 
     fn available_versions(&self, _language: &Self::Language) -> Vec<CompilerVersion> {
         match self {
-            Self::Specific(solc) => vec![CompilerVersion::Installed(Version::new(
-                solc.version.major,
-                solc.version.minor,
-                solc.version.patch,
-            ))],
+            Self::Specific(solc) => {
+                let mut v = Version::new(
+                    solc.version.major,
+                    solc.version.minor,
+                    solc.version.patch,
+                );
+                v.build = solc.version.build.clone();
+                vec![CompilerVersion::Installed(v)]
+            }
 
             #[cfg(feature = "svm-solc")]
             Self::AutoDetect => {
@@ -158,7 +162,7 @@ impl CompilerInput for SolcVersionedInput {
     }
 
     fn compiler_name(&self) -> Cow<'static, str> {
-        "Solc".into()
+        "ssolc".into()
     }
 
     fn strip_prefix(&mut self, base: &Path) {
