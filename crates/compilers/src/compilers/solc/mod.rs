@@ -84,11 +84,8 @@ impl Compiler for SolcCompiler {
     fn available_versions(&self, _language: &Self::Language) -> Vec<CompilerVersion> {
         match self {
             Self::Specific(solc) => {
-                let mut v = Version::new(
-                    solc.version.major,
-                    solc.version.minor,
-                    solc.version.patch,
-                );
+                let mut v =
+                    Version::new(solc.version.major, solc.version.minor, solc.version.patch);
                 v.build = solc.version.build.clone();
                 vec![CompilerVersion::Installed(v)]
             }
