@@ -1965,7 +1965,7 @@ mod tests {
             // Cancun
             ("0.8.24", Some(EvmVersion::Shanghai)),
             ("0.8.25", Some(EvmVersion::Cancun)),
-            ("0.8.28", Some(EvmVersion::Mercury)),
+            ("0.8.31", Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
             assert_eq!(
