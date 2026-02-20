@@ -385,6 +385,9 @@ pub fn extract_short_commit(version: &Version) -> Option<&str> {
 
 /// Format version with optional short commit hash for display.
 /// Returns e.g. "0.8.31 (676bdec)" or "0.8.31" if no commit metadata.
+/// Seismic note: changed the formatting here to show the commit version given that ssolc
+/// is not mature enough to follow proper semver so its useful to know which exact commit foundry is
+/// using.
 pub fn format_version_with_commit(version: &Version) -> String {
     if let Some(hash) = extract_short_commit(version) {
         format!("{}.{}.{} ({hash})", version.major, version.minor, version.patch)

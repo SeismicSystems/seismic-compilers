@@ -4,7 +4,7 @@ Fork of [Foundry Compilers](https://github.com/foundry-rs/compilers) (the compil
 
 ## What This Does
 
-Foundry Compilers provides Solidity and Vyper compilation, caching, dependency resolution, and artifact handling for the Foundry toolchain. Seismic's fork adds the **Mercury EVM version** — when the Solc version is >= 0.8.28, all EVM version normalization resolves to `Mercury`, which enables confidential storage opcodes (`CSTORE`/`CLOAD`) on Seismic's chain. The change is minimal: a constant, a new enum variant, and normalization logic.
+Foundry Compilers provides Solidity and Vyper compilation, caching, dependency resolution, and artifact handling for the Foundry toolchain. Seismic's fork adds the **Mercury EVM version** — when the Solc version is >= 0.8.31, all EVM version normalization resolves to `Mercury`, which enables confidential storage opcodes (`CSTORE`/`CLOAD`) on Seismic's chain. The change is minimal: a constant, a new enum variant, and normalization logic.
 
 ## Build
 
