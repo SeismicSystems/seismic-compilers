@@ -12,8 +12,6 @@ use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
-// TODO: remove
-#[allow(deprecated)]
 use winnow::{
     ascii::space1,
     combinator::{alt, opt, preceded},
