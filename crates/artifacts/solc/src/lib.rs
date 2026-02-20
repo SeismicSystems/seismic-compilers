@@ -2024,7 +2024,6 @@ mod tests {
             ("0.8.26", EvmVersion::Cancun, Some(EvmVersion::Cancun)),
             ("0.8.26", EvmVersion::Prague, Some(EvmVersion::Cancun)),
             ("0.8.27", EvmVersion::Prague, Some(EvmVersion::Prague)),
-            // Osaka
             ("0.8.29", EvmVersion::Osaka, Some(EvmVersion::Osaka)),
             // Mercury
             // This one is a bit weird... based on the version only you'd think it would clip to
