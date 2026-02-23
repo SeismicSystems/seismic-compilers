@@ -261,6 +261,11 @@ pub struct Settings {
     /// false by default.
     #[serde(rename = "viaIR", default, skip_serializing_if = "Option::is_none")]
     pub via_ir: Option<bool>,
+    /// Allow via-IR pipeline on Seismic's ssolc (experimental, shielded type support incomplete).
+    /// Needed since https://github.com/SeismicSystems/seismic-solidity/pull/204
+    /// Temporary flag while via-ir is experimental and may contain bugs.
+    #[serde(rename = "unsafeViaIR", default, skip_serializing_if = "Option::is_none")]
+    pub unsafe_via_ir: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub debug: Option<DebuggingSettings>,
     /// Addresses of the libraries. If not all libraries are given here,
@@ -553,6 +558,7 @@ impl Default for Settings {
             output_selection: OutputSelection::default_output_selection(),
             evm_version: Some(EvmVersion::default()),
             via_ir: None,
+            unsafe_via_ir: None,
             debug: None,
             libraries: Default::default(),
             remappings: Default::default(),
