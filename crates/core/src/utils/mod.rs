@@ -72,15 +72,19 @@ pub const OSAKA_SOLC: Version = Version::new(0, 8, 29);
 
 /// Mercury support (Seismic)
 ///
-/// This is a minimum version floor — "Mercury support requires at least 0.8.31".
+/// This is a minimum version floor — "Mercury support requires at least 0.8.30".
 /// It should match the upstream version that seismic-solidity was built on.
-/// The latest upstream rebase (to 0.8.31) is: https://github.com/SeismicSystems/seismic-solidity/pull/83
+/// The latest upstream rebase is: https://github.com/SeismicSystems/seismic-solidity/pull/83,
+/// which rebased on top of some commit between 0.8.30 and 0.8.31.
 /// If we ever decide to do another rebase on top of a later solidity version before finalizing the
 /// mercury evm-version feature set, then we will need to update this version.
 ///
+/// Note: we use 0.8.30 (not 0.8.31) because ssolc reports a pre-release version
+/// (e.g. 0.8.31-develop...) which is less than 0.8.31 in semver comparison.
+///
 /// Note also that despite its solc version being > osaka, in terms of feature sets (see EvmVersion
 /// enum), Mercury currently only enables Ethereum's Prague hardfork, not Osaka.
-pub const MERCURY_SOLC: Version = Version::new(0, 8, 31);
+pub const MERCURY_SOLC: Version = Version::new(0, 8, 30);
 
 // `--base-path` was introduced in 0.6.9 <https://github.com/ethereum/solidity/releases/tag/v0.6.9>
 pub static SUPPORTS_BASE_PATH: Lazy<VersionReq> =
