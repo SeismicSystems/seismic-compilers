@@ -1965,6 +1965,7 @@ mod tests {
             // Cancun
             ("0.8.24", Some(EvmVersion::Shanghai)),
             ("0.8.25", Some(EvmVersion::Cancun)),
+            ("0.8.30", Some(EvmVersion::Mercury)),
             ("0.8.31", Some(EvmVersion::Mercury)),
         ] {
             let version = Version::from_str(solc_version).unwrap();
@@ -2026,9 +2027,7 @@ mod tests {
             ("0.8.27", EvmVersion::Prague, Some(EvmVersion::Prague)),
             ("0.8.29", EvmVersion::Osaka, Some(EvmVersion::Osaka)),
             // Mercury
-            // This one is a bit weird... based on the version only you'd think it would clip to
-            // Osaka, but actually in terms EvmVersions Prague < Mercury < Osaka.
-            ("0.8.30", EvmVersion::Mercury, Some(EvmVersion::Prague)),
+            ("0.8.30", EvmVersion::Mercury, Some(EvmVersion::Mercury)),
             ("0.8.31", EvmVersion::Osaka, Some(EvmVersion::Osaka)),
             ("0.8.31", EvmVersion::Mercury, Some(EvmVersion::Mercury)),
         ] {
