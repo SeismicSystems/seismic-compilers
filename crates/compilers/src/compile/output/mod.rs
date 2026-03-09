@@ -882,10 +882,29 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
                 // files. if we are looking at one of these warnings
                 // from a test file we skip
                 ignore |= self.is_test(path) && (code == 1878 || code == 5574);
+
+                // we ignore shielded literal warnings in test and script files
+                // 9660 = int, 9661 = bool, 9662 = address, 9663 = fixedbytes, 1457 = enum
+                let is_shielded_literal_warning =
+                    code == 9660 || code == 9661 || code == 9662 || code == 9663 || code == 1457;
+                ignore |=
+                    (self.is_test(path) || self.is_script(path)) && is_shielded_literal_warning;
             }
         }
 
         ignore
+    }
+
+    /// Returns true if the contract is expected to be a script
+    fn is_script(&self, contract_path: &Path) -> bool {
+        let path_str = contract_path.to_string_lossy();
+        if path_str.ends_with(".s.sol") {
+            return true;
+        }
+        contract_path.components().any(|c| {
+            let s = c.as_os_str().to_string_lossy();
+            s == "script" || s == "scripts"
+        })
     }
 
     /// Returns true if the contract is a expected to be a test
