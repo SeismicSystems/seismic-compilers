@@ -1256,8 +1256,6 @@ mod tests {
         );
         assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS
             .contains(&SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES));
-        assert!(
-            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ENUM)
-        );
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ENUM));
     }
 }
