@@ -1,7 +1,5 @@
 //! The output of a compiled project
 
-// ======================== Shielded Literal Warning IDs ========================
-//
 // The Seismic Solidity compiler (ssolc) emits warnings when literals are
 // converted to shielded types. These IDs are grouped by AST context so that
 // downstream tools can selectively suppress them.
@@ -1097,7 +1095,7 @@ mod tests {
         output.should_ignore(&[], &[], &warning)
     }
 
-    // ===================== src/ files: nothing suppressed =====================
+    // src/ files: nothing suppressed
 
     #[test]
     fn src_file_shows_all_warnings() {
@@ -1123,7 +1121,7 @@ mod tests {
         assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "src/Foo.sol"));
     }
 
-    // ===================== test/ files =====================
+    // test/ files
 
     #[test]
     fn test_file_shows_constructor_param_warning() {
@@ -1157,7 +1155,7 @@ mod tests {
         assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "test/Foo.t.sol"));
     }
 
-    // ===================== script/ files =====================
+    // script/ files
 
     #[test]
     fn script_file_shows_constructor_param_warning() {
@@ -1191,7 +1189,7 @@ mod tests {
         assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "script/Deploy.s.sol"));
     }
 
-    // ===================== scripts/ directory variant =====================
+    // scripts/ directory variant
 
     #[test]
     fn scripts_dir_suppresses_same_as_script() {
@@ -1201,7 +1199,7 @@ mod tests {
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "scripts/Deploy.s.sol"));
     }
 
-    // ===================== lib/ and other paths: no suppression =====================
+    // lib/ and other paths: no suppression
 
     #[test]
     fn lib_file_shows_all_warnings() {
@@ -1212,7 +1210,7 @@ mod tests {
         assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "lib/Dep.sol"));
     }
 
-    // ===================== non-warning errors are never suppressed =====================
+    // non-warning errors are never suppressed
 
     #[test]
     fn errors_are_never_suppressed() {
@@ -1221,7 +1219,7 @@ mod tests {
         assert!(!output.should_ignore(&[], &[], &error));
     }
 
-    // ===================== constant values are correct =====================
+    // constant values are correct
 
     #[test]
     fn constant_values_match_spec() {
