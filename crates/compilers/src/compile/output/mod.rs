@@ -1,4 +1,63 @@
 //! The output of a compiled project
+
+// The Seismic Solidity compiler (ssolc) emits warnings when literals are
+// converted to shielded types. These IDs are grouped by AST context so that
+// downstream tools can selectively suppress them.
+
+/// Constructor has shielded parameter types.
+/// CREATE/CREATE2 does not encrypt calldata, so values leak in deployment tx.
+/// Not suppressed in any context — always relevant.
+#[cfg(test)]
+const SHIELDED_CONSTRUCTOR_PARAM: u64 = 5500;
+
+/// Shielded literal warnings: literal inside `new(...)` expression args.
+/// Child contract is deployed via CREATE — literal leaks in init code.
+/// Not suppressed in any context — always relevant.
+#[cfg(test)]
+const SHIELDED_LITERAL_NEW_EXPR_INT: u64 = 5501;
+#[cfg(test)]
+const SHIELDED_LITERAL_NEW_EXPR_BOOL: u64 = 5502;
+#[cfg(test)]
+const SHIELDED_LITERAL_NEW_EXPR_ADDRESS: u64 = 5503;
+#[cfg(test)]
+const SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES: u64 = 5504;
+#[cfg(test)]
+const SHIELDED_LITERAL_NEW_EXPR_ENUM: u64 = 5505;
+
+/// Shielded literal warnings: literal inside external call args.
+/// Literal is in caller bytecode, but calldata is encrypted by TxSeismic.
+/// Safe to suppress in test/script files.
+const SHIELDED_LITERAL_EXT_CALL_INT: u64 = 5506;
+const SHIELDED_LITERAL_EXT_CALL_BOOL: u64 = 5507;
+const SHIELDED_LITERAL_EXT_CALL_ADDRESS: u64 = 5508;
+const SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES: u64 = 5509;
+const SHIELDED_LITERAL_EXT_CALL_ENUM: u64 = 5510;
+
+/// Shielded literal warnings: literal in other contexts (assignments, internal calls, etc.).
+/// Literal is embedded in contract bytecode.
+/// Safe to suppress in test/script files where bytecode is never deployed.
+const SHIELDED_LITERAL_OTHER_INT: u64 = 9660;
+const SHIELDED_LITERAL_OTHER_BOOL: u64 = 9661;
+const SHIELDED_LITERAL_OTHER_ADDRESS: u64 = 9662;
+const SHIELDED_LITERAL_OTHER_FIXEDBYTES: u64 = 9663;
+const SHIELDED_LITERAL_OTHER_ENUM: u64 = 1457;
+
+/// Warnings suppressed in test/script files — bytecode never deployed, calldata encrypted.
+const SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS: &[u64] = &[
+    // External call context
+    SHIELDED_LITERAL_EXT_CALL_INT,
+    SHIELDED_LITERAL_EXT_CALL_BOOL,
+    SHIELDED_LITERAL_EXT_CALL_ADDRESS,
+    SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES,
+    SHIELDED_LITERAL_EXT_CALL_ENUM,
+    // Other context
+    SHIELDED_LITERAL_OTHER_INT,
+    SHIELDED_LITERAL_OTHER_BOOL,
+    SHIELDED_LITERAL_OTHER_ADDRESS,
+    SHIELDED_LITERAL_OTHER_FIXEDBYTES,
+    SHIELDED_LITERAL_OTHER_ENUM,
+];
+
 use contracts::{VersionedContract, VersionedContracts};
 use foundry_compilers_artifacts::{CompactContractBytecode, CompactContractRef, Severity};
 use foundry_compilers_core::error::{SolcError, SolcIoError};
@@ -882,10 +941,28 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
                 // files. if we are looking at one of these warnings
                 // from a test file we skip
                 ignore |= self.is_test(path) && (code == 1878 || code == 5574);
+
+                // Suppress shielded literal warnings that are safe in test/script files.
+                // Constructor param (5500) and new-expression (5501–5505) warnings are
+                // NOT suppressed because those contracts ARE deployed on-chain.
+                ignore |= (self.is_test(path) || self.is_script(path))
+                    && SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&code);
             }
         }
 
         ignore
+    }
+
+    /// Returns true if the contract is expected to be a script
+    fn is_script(&self, contract_path: &Path) -> bool {
+        let path_str = contract_path.to_string_lossy();
+        if path_str.ends_with(".s.sol") {
+            return true;
+        }
+        contract_path.components().any(|c| {
+            let s = c.as_os_str().to_string_lossy();
+            s == "script" || s == "scripts"
+        })
     }
 
     /// Returns true if the contract is a expected to be a test
@@ -954,5 +1031,229 @@ impl<C: Compiler> fmt::Display for OutputDiagnostics<'_, C> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compilers::multi::MultiCompilerError;
+    use foundry_compilers_artifacts::Error as SolcDiagnostic;
+
+    /// Build a minimal `AggregatedCompilerOutput<MultiCompiler>` for testing.
+    fn make_output() -> AggregatedCompilerOutput<MultiCompiler> {
+        AggregatedCompilerOutput {
+            errors: vec![],
+            sources: Default::default(),
+            contracts: Default::default(),
+            build_infos: Default::default(),
+        }
+    }
+
+    /// Create a solc warning with a given error code originating from a given file.
+    fn make_warning(code: u64, file: &str) -> MultiCompilerError {
+        let raw = serde_json::json!({
+            "type": "Warning",
+            "component": "general",
+            "severity": "warning",
+            "errorCode": code.to_string(),
+            "message": "test warning",
+            "formattedMessage": "test warning",
+            "sourceLocation": {
+                "file": file,
+                "start": 0,
+                "end": 1
+            }
+        });
+        let diag: SolcDiagnostic = serde_json::from_value(raw).expect("valid mock warning");
+        MultiCompilerError::Solc(diag)
+    }
+
+    /// Create a solc error (non-warning) with a given error code from a given file.
+    fn make_error(code: u64, file: &str) -> MultiCompilerError {
+        let raw = serde_json::json!({
+            "type": "Error",
+            "component": "general",
+            "severity": "error",
+            "errorCode": code.to_string(),
+            "message": "test error",
+            "formattedMessage": "test error",
+            "sourceLocation": {
+                "file": file,
+                "start": 0,
+                "end": 1
+            }
+        });
+        let diag: SolcDiagnostic = serde_json::from_value(raw).expect("valid mock error");
+        MultiCompilerError::Solc(diag)
+    }
+
+    /// Helper: returns true if the warning would be suppressed (ignored).
+    fn is_suppressed(code: u64, file: &str) -> bool {
+        let output = make_output();
+        let warning = make_warning(code, file);
+        output.should_ignore(&[], &[], &warning)
+    }
+
+    // src/ files: nothing suppressed
+
+    #[test]
+    fn src_file_shows_all_warnings() {
+        // Constructor param
+        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "src/Foo.sol"));
+        // New-expression warnings (5501–5505)
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, "src/Foo.sol"));
+        // External call warnings (5506–5510)
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_ENUM, "src/Foo.sol"));
+        // Other context (9660–9663, 1457)
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_INT, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_BOOL, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ADDRESS, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_FIXEDBYTES, "src/Foo.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "src/Foo.sol"));
+    }
+
+    // test/ files
+
+    #[test]
+    fn test_file_shows_constructor_param_warning() {
+        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "test/Foo.t.sol"));
+    }
+
+    #[test]
+    fn test_file_shows_new_expr_warnings() {
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "test/Foo.t.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, "test/Foo.t.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, "test/Foo.t.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, "test/Foo.t.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, "test/Foo.t.sol"));
+    }
+
+    #[test]
+    fn test_file_suppresses_ext_call_warnings() {
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ENUM, "test/Foo.t.sol"));
+    }
+
+    #[test]
+    fn test_file_suppresses_other_context_warnings() {
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_BOOL, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ADDRESS, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_FIXEDBYTES, "test/Foo.t.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "test/Foo.t.sol"));
+    }
+
+    // script/ files
+
+    #[test]
+    fn script_file_shows_constructor_param_warning() {
+        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "script/Deploy.s.sol"));
+    }
+
+    #[test]
+    fn script_file_shows_new_expr_warnings() {
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "script/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, "script/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, "script/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, "script/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, "script/Deploy.s.sol"));
+    }
+
+    #[test]
+    fn script_file_suppresses_ext_call_warnings() {
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ENUM, "script/Deploy.s.sol"));
+    }
+
+    #[test]
+    fn script_file_suppresses_other_context_warnings() {
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_BOOL, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ADDRESS, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_FIXEDBYTES, "script/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "script/Deploy.s.sol"));
+    }
+
+    // scripts/ directory variant
+
+    #[test]
+    fn scripts_dir_suppresses_same_as_script() {
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "scripts/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, "scripts/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "scripts/Deploy.s.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "scripts/Deploy.s.sol"));
+    }
+
+    // lib/ and other paths: no suppression
+
+    #[test]
+    fn lib_file_shows_all_warnings() {
+        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "lib/Dep.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "lib/Dep.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "lib/Dep.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_INT, "lib/Dep.sol"));
+        assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "lib/Dep.sol"));
+    }
+
+    // non-warning errors are never suppressed
+
+    #[test]
+    fn errors_are_never_suppressed() {
+        let output = make_output();
+        let error = make_error(SHIELDED_LITERAL_OTHER_INT, "test/Foo.t.sol");
+        assert!(!output.should_ignore(&[], &[], &error));
+    }
+
+    // constant values are correct
+
+    #[test]
+    fn constant_values_match_spec() {
+        assert_eq!(SHIELDED_CONSTRUCTOR_PARAM, 5500);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_INT, 5501);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_BOOL, 5502);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, 5503);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, 5504);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ENUM, 5505);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_INT, 5506);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_BOOL, 5507);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ADDRESS, 5508);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, 5509);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ENUM, 5510);
+        assert_eq!(SHIELDED_LITERAL_OTHER_INT, 9660);
+        assert_eq!(SHIELDED_LITERAL_OTHER_BOOL, 9661);
+        assert_eq!(SHIELDED_LITERAL_OTHER_ADDRESS, 9662);
+        assert_eq!(SHIELDED_LITERAL_OTHER_FIXEDBYTES, 9663);
+        assert_eq!(SHIELDED_LITERAL_OTHER_ENUM, 1457);
+    }
+
+    #[test]
+    fn suppressible_collection_has_correct_entries() {
+        // Should contain ext call + other context = 10 entries
+        assert_eq!(SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.len(), 10);
+        // Should NOT contain constructor param or new-expression warnings
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_CONSTRUCTOR_PARAM));
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_INT));
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_BOOL));
+        assert!(
+            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ADDRESS)
+        );
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS
+            .contains(&SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES));
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ENUM));
     }
 }
