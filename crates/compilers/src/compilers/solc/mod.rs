@@ -3,6 +3,7 @@ use super::{
     CompilerOutput, CompilerSettings, CompilerVersion, Language, ParsedSource,
 };
 use crate::{
+    compile::output::SeismicConfig,
     resolver::{
         parse::{SolData, SolParser},
         Node,
@@ -178,12 +179,9 @@ pub struct CliSettings {
     pub base_path: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub include_paths: BTreeSet<PathBuf>,
-    /// When true, show seismic warnings (code >= 10000) even in test files.
+    /// Seismic warning suppression config.
     #[serde(default)]
-    pub seismic_warnings_in_tests: bool,
-    /// When true, suppress ALL seismic warnings (code >= 10000) globally.
-    #[serde(default)]
-    pub no_seismic_warnings: bool,
+    pub seismic_cfg: SeismicConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
