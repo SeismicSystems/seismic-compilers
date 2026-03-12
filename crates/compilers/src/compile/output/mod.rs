@@ -8,39 +8,39 @@
 /// CREATE/CREATE2 does not encrypt calldata, so values leak in deployment tx.
 /// Not suppressed in any context — always relevant.
 #[cfg(test)]
-const SHIELDED_CONSTRUCTOR_PARAM: u64 = 5500;
+const SHIELDED_CONSTRUCTOR_PARAM: u64 = 10103;
 
 /// Shielded literal warnings: literal inside `new(...)` expression args.
 /// Child contract is deployed via CREATE — literal leaks in init code.
 /// Not suppressed in any context — always relevant.
 #[cfg(test)]
-const SHIELDED_LITERAL_NEW_EXPR_INT: u64 = 5501;
+const SHIELDED_LITERAL_NEW_EXPR_INT: u64 = 10401;
 #[cfg(test)]
-const SHIELDED_LITERAL_NEW_EXPR_BOOL: u64 = 5502;
+const SHIELDED_LITERAL_NEW_EXPR_BOOL: u64 = 10404;
 #[cfg(test)]
-const SHIELDED_LITERAL_NEW_EXPR_ADDRESS: u64 = 5503;
+const SHIELDED_LITERAL_NEW_EXPR_ADDRESS: u64 = 10407;
 #[cfg(test)]
-const SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES: u64 = 5504;
+const SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES: u64 = 10410;
 #[cfg(test)]
-const SHIELDED_LITERAL_NEW_EXPR_ENUM: u64 = 5505;
+const SHIELDED_LITERAL_NEW_EXPR_ENUM: u64 = 10413;
 
 /// Shielded literal warnings: literal inside external call args.
 /// Literal is in caller bytecode, but calldata is encrypted by TxSeismic.
 /// Safe to suppress in test/script files.
-const SHIELDED_LITERAL_EXT_CALL_INT: u64 = 5506;
-const SHIELDED_LITERAL_EXT_CALL_BOOL: u64 = 5507;
-const SHIELDED_LITERAL_EXT_CALL_ADDRESS: u64 = 5508;
-const SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES: u64 = 5509;
-const SHIELDED_LITERAL_EXT_CALL_ENUM: u64 = 5510;
+const SHIELDED_LITERAL_EXT_CALL_INT: u64 = 10402;
+const SHIELDED_LITERAL_EXT_CALL_BOOL: u64 = 10405;
+const SHIELDED_LITERAL_EXT_CALL_ADDRESS: u64 = 10408;
+const SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES: u64 = 10411;
+const SHIELDED_LITERAL_EXT_CALL_ENUM: u64 = 10414;
 
 /// Shielded literal warnings: literal in other contexts (assignments, internal calls, etc.).
 /// Literal is embedded in contract bytecode.
 /// Safe to suppress in test/script files where bytecode is never deployed.
-const SHIELDED_LITERAL_OTHER_INT: u64 = 9660;
-const SHIELDED_LITERAL_OTHER_BOOL: u64 = 9661;
-const SHIELDED_LITERAL_OTHER_ADDRESS: u64 = 9662;
-const SHIELDED_LITERAL_OTHER_FIXEDBYTES: u64 = 9663;
-const SHIELDED_LITERAL_OTHER_ENUM: u64 = 1457;
+const SHIELDED_LITERAL_OTHER_INT: u64 = 10403;
+const SHIELDED_LITERAL_OTHER_BOOL: u64 = 10406;
+const SHIELDED_LITERAL_OTHER_ADDRESS: u64 = 10409;
+const SHIELDED_LITERAL_OTHER_FIXEDBYTES: u64 = 10412;
+const SHIELDED_LITERAL_OTHER_ENUM: u64 = 10415;
 
 /// Warnings suppressed in test/script files — bytecode never deployed, calldata encrypted.
 const SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS: &[u64] = &[
@@ -943,8 +943,9 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
                 ignore |= self.is_test(path) && (code == 1878 || code == 5574);
 
                 // Suppress shielded literal warnings that are safe in test/script files.
-                // Constructor param (5500) and new-expression (5501–5505) warnings are
-                // NOT suppressed because those contracts ARE deployed on-chain.
+                // Constructor param (10103) and new-expression (10401,10404,10407,10410,10413)
+                // warnings are NOT suppressed because those contracts ARE deployed
+                // on-chain.
                 ignore |= (self.is_test(path) || self.is_script(path))
                     && SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&code);
             }
@@ -1101,13 +1102,13 @@ mod tests {
     fn src_file_shows_all_warnings() {
         // Constructor param
         assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "src/Foo.sol"));
-        // New-expression warnings (5501–5505)
+        // New-expression warnings (10401,10404,10407,10410,10413)
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, "src/Foo.sol"));
-        // External call warnings (5506–5510)
+        // External call warnings (10402,10405,10408,10411,10414)
         assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, "src/Foo.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, "src/Foo.sol"));
@@ -1223,22 +1224,22 @@ mod tests {
 
     #[test]
     fn constant_values_match_spec() {
-        assert_eq!(SHIELDED_CONSTRUCTOR_PARAM, 5500);
-        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_INT, 5501);
-        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_BOOL, 5502);
-        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, 5503);
-        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, 5504);
-        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ENUM, 5505);
-        assert_eq!(SHIELDED_LITERAL_EXT_CALL_INT, 5506);
-        assert_eq!(SHIELDED_LITERAL_EXT_CALL_BOOL, 5507);
-        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ADDRESS, 5508);
-        assert_eq!(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, 5509);
-        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ENUM, 5510);
-        assert_eq!(SHIELDED_LITERAL_OTHER_INT, 9660);
-        assert_eq!(SHIELDED_LITERAL_OTHER_BOOL, 9661);
-        assert_eq!(SHIELDED_LITERAL_OTHER_ADDRESS, 9662);
-        assert_eq!(SHIELDED_LITERAL_OTHER_FIXEDBYTES, 9663);
-        assert_eq!(SHIELDED_LITERAL_OTHER_ENUM, 1457);
+        assert_eq!(SHIELDED_CONSTRUCTOR_PARAM, 10103);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_INT, 10401);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_BOOL, 10404);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, 10407);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, 10410);
+        assert_eq!(SHIELDED_LITERAL_NEW_EXPR_ENUM, 10413);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_INT, 10402);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_BOOL, 10405);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ADDRESS, 10408);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, 10411);
+        assert_eq!(SHIELDED_LITERAL_EXT_CALL_ENUM, 10414);
+        assert_eq!(SHIELDED_LITERAL_OTHER_INT, 10403);
+        assert_eq!(SHIELDED_LITERAL_OTHER_BOOL, 10406);
+        assert_eq!(SHIELDED_LITERAL_OTHER_ADDRESS, 10409);
+        assert_eq!(SHIELDED_LITERAL_OTHER_FIXEDBYTES, 10412);
+        assert_eq!(SHIELDED_LITERAL_OTHER_ENUM, 10415);
     }
 
     #[test]
