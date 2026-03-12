@@ -54,8 +54,10 @@ pub struct SeismicConfig {
     pub no_seismic_warnings: bool,
 }
 
-/// Warnings suppressed in test/script files — bytecode never deployed, calldata encrypted.
-const SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS: &[u64] = &[
+/// Shielded warnings safe to suppress in script files — script bytecode is never deployed
+/// on-chain, and external call calldata is encrypted by the broadcast mechanism.
+/// Constructor/new-expression warnings are excluded because scripts DO deploy contracts.
+const SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS: &[u64] = &[
     // External call context
     SHIELDED_LITERAL_EXT_CALL_INT,
     SHIELDED_LITERAL_EXT_CALL_BOOL,
@@ -972,18 +974,20 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
                 // from a test file we skip
                 ignore |= self.is_test(path) && (code == 1878 || code == 5574);
 
-                // Suppress shielded literal warnings that are safe in test/script files.
-                // Constructor param (10103) and new-expression (10401,10404,10407,10410,10413)
-                // warnings are NOT suppressed because those contracts ARE deployed
-                // on-chain.
-                //
-                // Scripts always suppress. Tests suppress unless
-                // seismic_warnings_in_tests is set.
-                if SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&code) {
+                // Tests: suppress ALL seismic warnings by default (tests never deploy
+                // to mainnet). The seismic_warnings_in_tests flag opts out of this.
+                if code >= SEISMIC_WARNING_THRESHOLD
+                    && self.is_test(path)
+                    && !seismic_cfg.seismic_warnings_in_tests
+                {
+                    return true;
+                }
+
+                // Scripts: suppress only the safe subset (ext-call + other context).
+                // Constructor/new-expression warnings are NOT suppressed because
+                // scripts DO deploy contracts on-chain.
+                if SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&code) {
                     ignore |= self.is_script(path);
-                    if !seismic_cfg.seismic_warnings_in_tests {
-                        ignore |= self.is_test(path);
-                    }
                 }
             }
         }
@@ -1174,38 +1178,37 @@ mod tests {
         assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "src/Foo.sol"));
     }
 
-    // test/ files
+    // test/ files — ALL seismic warnings suppressed by default
 
     #[test]
-    fn test_file_shows_constructor_param_warning() {
-        assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "test/Foo.t.sol"));
+    fn test_file_suppresses_all_seismic_warnings() {
+        let f = "test/Foo.t.sol";
+        // Constructor param
+        assert!(is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, f));
+        // New-expression
+        assert!(is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, f));
+        // External call
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ENUM, f));
+        // Other context
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_BOOL, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ADDRESS, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_FIXEDBYTES, f));
+        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, f));
     }
 
     #[test]
-    fn test_file_shows_new_expr_warnings() {
-        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "test/Foo.t.sol"));
-        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_BOOL, "test/Foo.t.sol"));
-        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ADDRESS, "test/Foo.t.sol"));
-        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES, "test/Foo.t.sol"));
-        assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_ENUM, "test/Foo.t.sol"));
-    }
-
-    #[test]
-    fn test_file_suppresses_ext_call_warnings() {
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_BOOL, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ADDRESS, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_FIXEDBYTES, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_ENUM, "test/Foo.t.sol"));
-    }
-
-    #[test]
-    fn test_file_suppresses_other_context_warnings() {
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_BOOL, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ADDRESS, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_FIXEDBYTES, "test/Foo.t.sol"));
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "test/Foo.t.sol"));
+    fn test_file_does_not_suppress_non_seismic_warnings() {
+        // Non-seismic warnings (e.g. SPDX, code-size) are handled separately
+        assert!(!is_suppressed(2018, "test/Foo.t.sol")); // func-mutability
     }
 
     // script/ files
@@ -1296,16 +1299,20 @@ mod tests {
 
     #[test]
     fn suppressible_collection_has_correct_entries() {
-        assert_eq!(SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.len(), 10);
-        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_CONSTRUCTOR_PARAM));
-        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_INT));
-        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_BOOL));
+        assert_eq!(SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.len(), 10);
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_CONSTRUCTOR_PARAM));
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_LITERAL_NEW_EXPR_INT));
         assert!(
-            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ADDRESS)
+            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_LITERAL_NEW_EXPR_BOOL)
         );
-        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS
+        assert!(
+            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ADDRESS)
+        );
+        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS
             .contains(&SHIELDED_LITERAL_NEW_EXPR_FIXEDBYTES));
-        assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_TESTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ENUM));
+        assert!(
+            !SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_LITERAL_NEW_EXPR_ENUM)
+        );
     }
 
     // --no-seismic-warnings suppresses ALL seismic warnings globally
@@ -1347,19 +1354,15 @@ mod tests {
         assert!(!output.should_ignore(&[], &[], &error, NO_WARNINGS));
     }
 
-    // --seismic-warnings-in-tests disables test suppression (not script)
+    // --seismic-warnings-in-tests disables blanket test suppression (not script)
 
     #[test]
-    fn seismic_warnings_in_tests_shows_ext_call_in_test() {
+    fn seismic_warnings_in_tests_shows_all_in_test() {
         let f = "test/Foo.t.sol";
-        assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, f));
+        // With SHOW_IN_TESTS, nothing is blanket-suppressed
+        assert!(!is_suppressed_with_cfg(SHIELDED_CONSTRUCTOR_PARAM, f, SHOW_IN_TESTS));
+        assert!(!is_suppressed_with_cfg(SHIELDED_LITERAL_NEW_EXPR_INT, f, SHOW_IN_TESTS));
         assert!(!is_suppressed_with_cfg(SHIELDED_LITERAL_EXT_CALL_INT, f, SHOW_IN_TESTS));
-    }
-
-    #[test]
-    fn seismic_warnings_in_tests_shows_other_in_test() {
-        let f = "test/Foo.t.sol";
-        assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, f));
         assert!(!is_suppressed_with_cfg(SHIELDED_LITERAL_OTHER_INT, f, SHOW_IN_TESTS));
     }
 
