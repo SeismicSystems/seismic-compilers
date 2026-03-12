@@ -181,6 +181,9 @@ pub struct CliSettings {
     /// When true, show seismic warnings (code >= 10000) even in test files.
     #[serde(default)]
     pub seismic_warnings_in_tests: bool,
+    /// When true, suppress ALL seismic warnings (code >= 10000) globally.
+    #[serde(default)]
+    pub no_seismic_warnings: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]

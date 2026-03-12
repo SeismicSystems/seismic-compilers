@@ -2,7 +2,8 @@
 
 // Seismic warnings use error codes >= 10000. By default these are suppressed
 // in test files (not scripts, not src). The `seismic_warnings_in_tests` flag
-// can be set to disable this suppression.
+// can be set to disable this suppression. The `no_seismic_warnings` flag
+// suppresses ALL seismic warnings globally (in src, test, and script files).
 
 /// The minimum error code for seismic-specific warnings.
 const SEISMIC_WARNING_THRESHOLD: u64 = 10000;
@@ -88,6 +89,8 @@ pub struct ProjectCompileOutput<
     pub(crate) ignored_file_paths: Vec<PathBuf>,
     /// When true, seismic warnings (code >= 10000) are shown even in test files.
     pub(crate) seismic_warnings_in_tests: bool,
+    /// When true, suppress ALL seismic warnings (code >= 10000) globally.
+    pub(crate) no_seismic_warnings: bool,
     /// set minimum level of severity that is treated as an error
     pub(crate) compiler_severity_filter: Severity,
     /// all build infos that were just compiled
@@ -500,6 +503,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>>
             &self.ignored_file_paths,
             &self.compiler_severity_filter,
             self.seismic_warnings_in_tests,
+            self.no_seismic_warnings,
         )
     }
 
@@ -509,6 +513,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>>
             &self.ignored_error_codes,
             &self.ignored_file_paths,
             self.seismic_warnings_in_tests,
+            self.no_seismic_warnings,
         )
     }
 
@@ -539,6 +544,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> fmt
                     &self.ignored_file_paths,
                     self.compiler_severity_filter,
                     self.seismic_warnings_in_tests,
+                    self.no_seismic_warnings,
                 )
                 .fmt(f)
         }
@@ -584,6 +590,7 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
         ignored_file_paths: &'a [PathBuf],
         compiler_severity_filter: Severity,
         seismic_warnings_in_tests: bool,
+        no_seismic_warnings: bool,
     ) -> OutputDiagnostics<'a, C> {
         OutputDiagnostics {
             compiler_output: self,
@@ -591,6 +598,7 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
             ignored_file_paths,
             compiler_severity_filter,
             seismic_warnings_in_tests,
+            no_seismic_warnings,
         }
     }
 
@@ -852,6 +860,7 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
         ignored_file_paths: &[PathBuf],
         compiler_severity_filter: &Severity,
         seismic_warnings_in_tests: bool,
+        no_seismic_warnings: bool,
     ) -> bool {
         self.errors.iter().any(|err| {
             if err.is_error() {
@@ -866,6 +875,7 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
                         ignored_error_codes,
                         ignored_file_paths,
                         seismic_warnings_in_tests,
+                        no_seismic_warnings,
                     );
                 }
                 return true;
@@ -881,12 +891,14 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
         ignored_error_codes: &[u64],
         ignored_file_paths: &[PathBuf],
         seismic_warnings_in_tests: bool,
+        no_seismic_warnings: bool,
     ) -> bool {
         self.errors.iter().any(|error| {
             !self.should_ignore(
                 ignored_error_codes,
                 ignored_file_paths,
                 seismic_warnings_in_tests,
+                no_seismic_warnings,
                 error,
             )
         })
@@ -897,6 +909,7 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
         ignored_error_codes: &[u64],
         ignored_file_paths: &[PathBuf],
         seismic_warnings_in_tests: bool,
+        no_seismic_warnings: bool,
         error: &C::CompilationError,
     ) -> bool {
         if !error.is_warning() {
@@ -907,6 +920,13 @@ impl<C: Compiler> AggregatedCompilerOutput<C> {
 
         if let Some(code) = error.error_code() {
             ignore |= ignored_error_codes.contains(&code);
+
+            // When no_seismic_warnings is set, suppress ALL seismic warnings globally
+            // (in src, test, and script files).
+            if no_seismic_warnings && code >= SEISMIC_WARNING_THRESHOLD {
+                return true;
+            }
+
             if let Some(loc) = error.source_location() {
                 let path = Path::new(&loc.file);
                 ignore |=
@@ -967,6 +987,8 @@ pub struct OutputDiagnostics<'a, C: Compiler> {
     compiler_severity_filter: Severity,
     /// When true, seismic warnings (code >= 10000) are shown even in test files.
     seismic_warnings_in_tests: bool,
+    /// When true, suppress ALL seismic warnings (code >= 10000) globally.
+    no_seismic_warnings: bool,
 }
 
 impl<C: Compiler> OutputDiagnostics<'_, C> {
@@ -977,6 +999,7 @@ impl<C: Compiler> OutputDiagnostics<'_, C> {
             self.ignored_file_paths,
             &self.compiler_severity_filter,
             self.seismic_warnings_in_tests,
+            self.no_seismic_warnings,
         )
     }
 
@@ -986,6 +1009,7 @@ impl<C: Compiler> OutputDiagnostics<'_, C> {
             self.ignored_error_codes,
             self.ignored_file_paths,
             self.seismic_warnings_in_tests,
+            self.no_seismic_warnings,
         )
     }
 }
@@ -1006,6 +1030,7 @@ impl<C: Compiler> fmt::Display for OutputDiagnostics<'_, C> {
                 self.ignored_error_codes,
                 self.ignored_file_paths,
                 self.seismic_warnings_in_tests,
+                self.no_seismic_warnings,
                 err,
             ) {
                 f.write_str("\n")?;
@@ -1075,14 +1100,21 @@ mod tests {
     fn is_suppressed(code: u64, file: &str) -> bool {
         let output = make_output();
         let warning = make_warning(code, file);
-        output.should_ignore(&[], &[], false, &warning)
+        output.should_ignore(&[], &[], false, false, &warning)
     }
 
     /// Helper: returns true if the warning would be suppressed with the given flag.
     fn is_suppressed_with_flag(code: u64, file: &str, seismic_warnings_in_tests: bool) -> bool {
         let output = make_output();
         let warning = make_warning(code, file);
-        output.should_ignore(&[], &[], seismic_warnings_in_tests, &warning)
+        output.should_ignore(&[], &[], seismic_warnings_in_tests, false, &warning)
+    }
+
+    /// Helper: returns true if the warning would be suppressed with no_seismic_warnings set.
+    fn is_suppressed_no_seismic(code: u64, file: &str) -> bool {
+        let output = make_output();
+        let warning = make_warning(code, file);
+        output.should_ignore(&[], &[], false, true, &warning)
     }
 
     #[test]
@@ -1114,9 +1146,40 @@ mod tests {
     }
 
     #[test]
+    fn no_seismic_warnings_suppresses_in_src() {
+        assert!(is_suppressed_no_seismic(10001, "src/Foo.sol"));
+        assert!(is_suppressed_no_seismic(15000, "src/Foo.sol"));
+    }
+
+    #[test]
+    fn no_seismic_warnings_suppresses_in_test() {
+        assert!(is_suppressed_no_seismic(10001, "test/Foo.t.sol"));
+    }
+
+    #[test]
+    fn no_seismic_warnings_suppresses_in_script() {
+        assert!(is_suppressed_no_seismic(10001, "script/Deploy.s.sol"));
+        assert!(is_suppressed_no_seismic(10001, "scripts/Deploy.s.sol"));
+    }
+
+    #[test]
+    fn no_seismic_warnings_does_not_suppress_non_seismic() {
+        let output = make_output();
+        let warning = make_warning(9999, "src/Foo.sol");
+        assert!(!output.should_ignore(&[], &[], false, true, &warning));
+    }
+
+    #[test]
     fn errors_never_suppressed() {
         let output = make_output();
         let error = make_error(10001, "test/Foo.t.sol");
-        assert!(!output.should_ignore(&[], &[], false, &error));
+        assert!(!output.should_ignore(&[], &[], false, false, &error));
+    }
+
+    #[test]
+    fn errors_never_suppressed_even_with_no_seismic_warnings() {
+        let output = make_output();
+        let error = make_error(10001, "src/Foo.sol");
+        assert!(!output.should_ignore(&[], &[], false, true, &error));
     }
 }
