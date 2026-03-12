@@ -110,6 +110,8 @@ pub struct Project<
     pub ignored_file_paths: Vec<PathBuf>,
     /// The minimum severity level that is treated as a compiler error
     pub compiler_severity_filter: Severity,
+    /// When true, seismic warnings (code >= 10000) are shown even in test files.
+    pub seismic_warnings_in_tests: bool,
     /// Maximum number of `solc` processes to run simultaneously.
     solc_jobs: usize,
     /// Offline mode, if set, network access (download solc) is disallowed
@@ -467,6 +469,8 @@ pub struct ProjectBuilder<
     pub ignored_file_paths: Vec<PathBuf>,
     /// The minimum severity level that is treated as a compiler error
     compiler_severity_filter: Severity,
+    /// When true, seismic warnings (code >= 10000) are shown even in test files.
+    seismic_warnings_in_tests: bool,
     solc_jobs: Option<usize>,
     /// Optional sparse output filter used to optimize compilation.
     sparse_output: Option<Box<dyn FileFilter>>,
@@ -486,6 +490,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
             ignored_error_codes: Vec::new(),
             ignored_file_paths: Vec::new(),
             compiler_severity_filter: Severity::Error,
+            seismic_warnings_in_tests: false,
             solc_jobs: None,
             settings: None,
             sparse_output: None,
@@ -528,6 +533,13 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
     #[must_use]
     pub fn set_compiler_severity_filter(mut self, compiler_severity_filter: Severity) -> Self {
         self.compiler_severity_filter = compiler_severity_filter;
+        self
+    }
+
+    /// When true, seismic warnings (code >= 10000) are shown even in test files.
+    #[must_use]
+    pub fn set_seismic_warnings_in_tests(mut self, seismic_warnings_in_tests: bool) -> Self {
+        self.seismic_warnings_in_tests = seismic_warnings_in_tests;
         self
     }
 
@@ -644,6 +656,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
             no_artifacts,
             ignored_error_codes,
             compiler_severity_filter,
+            seismic_warnings_in_tests,
             solc_jobs,
             offline,
             build_info,
@@ -667,6 +680,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
             ignored_error_codes,
             ignored_file_paths,
             compiler_severity_filter,
+            seismic_warnings_in_tests,
             solc_jobs,
             build_info,
             settings,
@@ -683,6 +697,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
             ignored_error_codes,
             ignored_file_paths,
             compiler_severity_filter,
+            seismic_warnings_in_tests,
             solc_jobs,
             offline,
             build_info,
@@ -710,6 +725,7 @@ impl<C: Compiler, T: ArtifactOutput<CompilerContract = C::CompilerContract>> Pro
             ignored_error_codes,
             ignored_file_paths,
             compiler_severity_filter,
+            seismic_warnings_in_tests,
             solc_jobs: solc_jobs
                 .or_else(|| std::thread::available_parallelism().ok().map(|n| n.get()))
                 .unwrap_or(1),

@@ -2205,7 +2205,7 @@ fn test_severity_warnings() {
     tmp.add_source("A", content).unwrap();
 
     let out = tmp.compile().unwrap();
-    assert!(out.output().has_error(&[], &[], &Severity::Warning));
+    assert!(out.output().has_error(&[], &[], &Severity::Warning, false));
 
     let content = r"
     // SPDX-License-Identifier: MIT OR Apache-2.0
@@ -2215,7 +2215,7 @@ fn test_severity_warnings() {
     tmp.add_source("A", content).unwrap();
 
     let out = tmp.compile().unwrap();
-    assert!(!out.output().has_error(&[], &[], &Severity::Warning));
+    assert!(!out.output().has_error(&[], &[], &Severity::Warning, false));
 
     let content = r"
     // SPDX-License-Identifier: MIT OR Apache-2.0
@@ -2229,7 +2229,7 @@ fn test_severity_warnings() {
     tmp.add_source("A", content).unwrap();
 
     let out = tmp.compile().unwrap();
-    assert!(out.output().has_error(&[], &[], &Severity::Warning));
+    assert!(out.output().has_error(&[], &[], &Severity::Warning, false));
 }
 
 #[test]
