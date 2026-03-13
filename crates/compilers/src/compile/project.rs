@@ -321,6 +321,7 @@ impl<'a, T: ArtifactOutput<CompilerContract = C::CompilerContract>, C: Compiler>
             &project.ignored_error_codes,
             &project.ignored_file_paths,
             &project.compiler_severity_filter,
+            project.seismic_cfg,
         ) {
             trace!("skip writing cache file due to solc errors: {:?}", output.errors);
             project.artifacts_handler().output_to_artifacts(
@@ -376,8 +377,13 @@ impl<T: ArtifactOutput<CompilerContract = C::CompilerContract>, C: Compiler>
         let ignored_error_codes = project.ignored_error_codes.clone();
         let ignored_file_paths = project.ignored_file_paths.clone();
         let compiler_severity_filter = project.compiler_severity_filter;
-        let has_error =
-            output.has_error(&ignored_error_codes, &ignored_file_paths, &compiler_severity_filter);
+        let seismic_cfg = project.seismic_cfg;
+        let has_error = output.has_error(
+            &ignored_error_codes,
+            &ignored_file_paths,
+            &compiler_severity_filter,
+            seismic_cfg,
+        );
         let skip_write_to_disk = project.no_artifacts || has_error;
         trace!(has_error, project.no_artifacts, skip_write_to_disk, cache_path=?project.cache_path(),"prepare writing cache file");
 
@@ -403,6 +409,7 @@ impl<T: ArtifactOutput<CompilerContract = C::CompilerContract>, C: Compiler>
             ignored_error_codes,
             ignored_file_paths,
             compiler_severity_filter,
+            seismic_cfg,
             builds,
             edges,
         })

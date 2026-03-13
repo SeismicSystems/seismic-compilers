@@ -3,6 +3,7 @@ use super::{
     CompilerOutput, CompilerSettings, CompilerVersion, Language, ParsedSource,
 };
 use crate::{
+    compile::output::SeismicConfig,
     resolver::{
         parse::{SolData, SolParser},
         Node,
@@ -178,6 +179,9 @@ pub struct CliSettings {
     pub base_path: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub include_paths: BTreeSet<PathBuf>,
+    /// Seismic warning suppression config.
+    #[serde(default)]
+    pub seismic_cfg: SeismicConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
