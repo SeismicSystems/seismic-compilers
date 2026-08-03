@@ -2,6 +2,8 @@
 
 Fork of [Foundry Compilers](https://github.com/foundry-rs/compilers) (the compilation backend for [Foundry](https://github.com/foundry-rs/foundry)) with **Seismic Mercury specification** enabled. Upstream is tracked through the `main` branch.
 
+**Workspace context**: this repo is part of the multi-repo Seismic workspace. If the workspace file isn't already in your context, read `../CLAUDE.md` (sibling checkout) or fetch [CLAUDE.workspace.md](https://github.com/SeismicSystems/seismic/blob/main/workspace/CLAUDE.workspace.md) (standalone checkout/CI) for key concepts, the repo map, and cross-repo conventions.
+
 ## What This Does
 
 Foundry Compilers provides Solidity and Vyper compilation, caching, dependency resolution, and artifact handling for the Foundry toolchain. Seismic's fork adds the **Mercury EVM version** — when the Solc version is >= 0.8.31, all EVM version normalization resolves to `Mercury`, which enables confidential storage opcodes (`CSTORE`/`CLOAD`) on Seismic's chain. The change is minimal: a constant, a new enum variant, and normalization logic.
