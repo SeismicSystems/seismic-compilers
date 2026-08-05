@@ -42,6 +42,11 @@ const SHIELDED_LITERAL_OTHER_ADDRESS: u64 = 10409;
 const SHIELDED_LITERAL_OTHER_FIXEDBYTES: u64 = 10412;
 const SHIELDED_LITERAL_OTHER_ENUM: u64 = 10415;
 
+/// Shielded number literal warning: s-literal syntax (e.g. `5s`).
+/// Literal is embedded in contract bytecode.
+/// Safe to suppress in test/script files where bytecode is never deployed.
+const SHIELDED_NUMBER_LITERAL: u64 = 10416;
+
 /// Threshold above which a warning code is considered a seismic warning.
 const SEISMIC_WARNING_THRESHOLD: u64 = 10000;
 
@@ -70,6 +75,8 @@ const SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS: &[u64] = &[
     SHIELDED_LITERAL_OTHER_ADDRESS,
     SHIELDED_LITERAL_OTHER_FIXEDBYTES,
     SHIELDED_LITERAL_OTHER_ENUM,
+    // S-literal syntax
+    SHIELDED_NUMBER_LITERAL,
 ];
 
 use contracts::{VersionedContract, VersionedContracts};
@@ -1245,12 +1252,18 @@ mod tests {
         assert!(is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "script/Deploy.s.sol"));
     }
 
+    #[test]
+    fn script_file_suppresses_s_literal_warning() {
+        assert!(is_suppressed(SHIELDED_NUMBER_LITERAL, "script/Deploy.s.sol"));
+    }
+
     // scripts/ directory variant
 
     #[test]
     fn scripts_dir_suppresses_same_as_script() {
         assert!(is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "scripts/Deploy.s.sol"));
         assert!(is_suppressed(SHIELDED_LITERAL_OTHER_INT, "scripts/Deploy.s.sol"));
+        assert!(is_suppressed(SHIELDED_NUMBER_LITERAL, "scripts/Deploy.s.sol"));
         assert!(!is_suppressed(SHIELDED_CONSTRUCTOR_PARAM, "scripts/Deploy.s.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_NEW_EXPR_INT, "scripts/Deploy.s.sol"));
     }
@@ -1264,6 +1277,7 @@ mod tests {
         assert!(!is_suppressed(SHIELDED_LITERAL_EXT_CALL_INT, "lib/Dep.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_INT, "lib/Dep.sol"));
         assert!(!is_suppressed(SHIELDED_LITERAL_OTHER_ENUM, "lib/Dep.sol"));
+        assert!(!is_suppressed(SHIELDED_NUMBER_LITERAL, "lib/Dep.sol"));
     }
 
     // non-warning errors are never suppressed
@@ -1295,11 +1309,12 @@ mod tests {
         assert_eq!(SHIELDED_LITERAL_OTHER_ADDRESS, 10409);
         assert_eq!(SHIELDED_LITERAL_OTHER_FIXEDBYTES, 10412);
         assert_eq!(SHIELDED_LITERAL_OTHER_ENUM, 10415);
+        assert_eq!(SHIELDED_NUMBER_LITERAL, 10416);
     }
 
     #[test]
     fn suppressible_collection_has_correct_entries() {
-        assert_eq!(SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.len(), 10);
+        assert_eq!(SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.len(), 11);
         assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_CONSTRUCTOR_PARAM));
         assert!(!SHIELDED_WARNINGS_SUPPRESSIBLE_IN_SCRIPTS.contains(&SHIELDED_LITERAL_NEW_EXPR_INT));
         assert!(
